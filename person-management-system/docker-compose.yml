@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:15
+    container_name: person_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    container_name: person_backend
+    ports:
+      - "5000:5000"
+    # --- YENİ EKLENEN KISIM ---
+    volumes:
+      - ./backend:/app
+      - /app/node_modules # node_modules'un çakışmaması için önemli
+    # --------------------------
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      - db
+    command: npm run dev # nodemon'u çalıştırır
+
+  frontend:
+    build: ./frontend
+    container_name: person_frontend
+    ports:
+      - "5173:5173"
+    # --- YENİ EKLENEN KISIM ---
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    # --------------------------
+    depends_on:
+      - backend
