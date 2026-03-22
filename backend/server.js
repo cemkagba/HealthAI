@@ -16,7 +16,6 @@ const pool = new Pool({
   port: 5432,
 });
 
-// 1. Tüm kişileri getir (READ) - Zaten vardı, sadece sıralama ekledik
 app.get('/api/people', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM people ORDER BY id ASC');
@@ -26,7 +25,6 @@ app.get('/api/people', async (req, res) => {
   }
 });
 
-// 2. Yeni kişi ekle (CREATE) - YENİ EKLENDİ
 app.post('/api/people', async (req, res) => {
   try {
     const { full_name, email } = req.body;
@@ -40,7 +38,6 @@ app.post('/api/people', async (req, res) => {
   }
 });
 
-// 3. Kişi sil (DELETE) - YENİ EKLENDİ
 app.delete('/api/people/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -51,7 +48,6 @@ app.delete('/api/people/:id', async (req, res) => {
   }
 });
 
-// 4. Kişi güncelle (UPDATE) - YENİ EKLENDİ
 app.put('/api/people/:id', async (req, res) => {
   try {
     const { id } = req.params;

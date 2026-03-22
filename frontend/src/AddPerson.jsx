@@ -5,7 +5,7 @@ function AddPerson() {
   const [email, setEmail] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Sayfanın yenilenmesini engeller
+    e.preventDefault();
     if (!fullName || !email) {
       alert('Lütfen tüm alanları doldurun!');
       return;
@@ -20,7 +20,7 @@ function AddPerson() {
 
       if (response.ok) {
         alert('Kişi başarıyla eklendi!');
-        setFullName(''); // Formu temizle
+        setFullName('');
         setEmail('');
       }
     } catch (error) {

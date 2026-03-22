@@ -17,12 +17,12 @@ function PeopleList() {
   const handleDelete = async (id) => {
     if (window.confirm('Bu kişiyi silmek istediğinize emin misiniz?')) {
       await fetch(`http://localhost:5000/api/people/${id}`, { method: 'DELETE' });
-      fetchPeople(); // Sildikten sonra listeyi yenile
+      fetchPeople();
     }
   };
 
   const handleEdit = async (person) => {
-    // Basit olması için tarayıcının kendi popup penceresini kullanıyoruz
+
     const newName = window.prompt("Yeni Ad Soyad:", person.full_name);
     const newEmail = window.prompt("Yeni E-posta:", person.email);
     
@@ -32,7 +32,7 @@ function PeopleList() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name: newName, email: newEmail })
       });
-      fetchPeople(); // Güncelledikten sonra listeyi yenile
+      fetchPeople();
     }
   };
 
