@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEALTH AI Platform — Backend Phase Complete</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 48px 56px;
+      max-width: 560px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #0ea5e920; border: 1px solid #0ea5e9;
+      color: #38bdf8; border-radius: 999px;
+      font-size: 12px; font-weight: 600; letter-spacing: .05em;
+      padding: 4px 14px; margin-bottom: 28px; text-transform: uppercase;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+           animation: pulse 1.5s ease-in-out infinite; display: inline-block; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    h1 { font-size: 28px; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; }
+    p  { color: #94a3b8; line-height: 1.7; margin-bottom: 32px; }
+    .endpoints { text-align: left; background: #0f172a; border-radius: 10px;
+                 padding: 20px 24px; margin-bottom: 28px; }
+    .endpoints h3 { font-size: 11px; color: #64748b; text-transform: uppercase;
+                    letter-spacing: .1em; margin-bottom: 14px; }
+    .endpoint { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+    .method { font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+    .get  { background: #0ea5e920; color: #38bdf8; }
+    .post { background: #22c55e20; color: #4ade80; }
+    .path { color: #cbd5e1; font-family: monospace; }
+    .confirm-note {
+      font-size: 13px; color: #64748b; border-top: 1px solid #334155; padding-top: 24px;
+    }
+    .confirm-note strong { color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge"><span class="dot"></span> Backend Phase Complete</div>
+    <h1>HEALTH AI Platform</h1>
+    <p>The Express backend and PostgreSQL database are fully operational. Seed data has been applied. Awaiting frontend confirmation to proceed.</p>
+
+    <div class="endpoints">
+      <h3>Available API Routes</h3>
+      <div class="endpoint"><span class="method get">GET</span><span class="path">/api/health</span></div>
+      <div class="endpoint"><span class="method post">POST</span><span class="path">/api/auth/register</span></div>
+      <div class="endpoint"><span class="method post">POST</span><span class="path">/api/auth/login</span></div>
+      <div class="endpoint"><span class="method get">GET</span><span class="path">/api/auth/me</span></div>
+      <div class="endpoint"><span class="method get">GET</span><span class="path">/api/posts</span></div>
+      <div class="endpoint"><span class="method post">POST</span><span class="path">/api/posts</span></div>
+      <div class="endpoint"><span class="method post">POST</span><span class="path">/api/meetings</span></div>
+      <div class="endpoint"><span class="method get">GET</span><span class="path">/api/admin/stats</span></div>
+      <div class="endpoint"><span class="method get">GET</span><span class="path">/api/admin/logs</span></div>
+    </div>
+
+    <div class="confirm-note">
+      Reply <strong>"Confirmed — proceed to frontend"</strong> to begin React implementation.
+    </div>
+  </div>
+</body>
+</html>

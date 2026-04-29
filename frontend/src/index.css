@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { @apply bg-slate-900 text-slate-100 antialiased; }
+  * { @apply border-slate-700; }
+  ::-webkit-scrollbar { @apply w-1.5; }
+  ::-webkit-scrollbar-track { @apply bg-slate-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-600 rounded-full; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-primary { @apply btn bg-sky-600 hover:bg-sky-500 text-white focus:ring-sky-500; }
+  .btn-secondary { @apply btn bg-zinc-700 hover:bg-zinc-600 text-slate-100 focus:ring-zinc-500; }
+  .btn-danger { @apply btn bg-rose-700 hover:bg-rose-600 text-white focus:ring-rose-500; }
+  .btn-ghost { @apply btn text-slate-400 hover:text-slate-100 hover:bg-zinc-800 focus:ring-slate-500; }
+  .input { @apply w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-colors text-sm; }
+  .label { @apply block text-sm font-medium text-slate-300 mb-1.5; }
+  .card { @apply bg-zinc-800/80 border border-zinc-700 rounded-xl; }
+  .page-title { @apply text-2xl font-bold text-slate-100; }
+  .section-title { @apply text-lg font-semibold text-slate-200; }
+}
