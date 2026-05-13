@@ -26,22 +26,22 @@ Since the database is securely hosted on Neon DB, you no longer need a local Pos
 ```bash
 git clone [https://github.com/cemkagba/HealthAI.git](https://github.com/cemkagba/HealthAI.git)
 cd HealthAI
-
-2. Environment Variables:
+```
+**2. Environment Variables:**
 Create a .env file in the backend directory and add your Neon DB connection string:
 DATABASE_URL=postgresql://[user]:[password]@[host]/[dbname]?sslmode=require
 
-3. Run via Docker (App Containers only):
+**3. Run via Docker (App Containers only):**
 
 Bash
 docker compose up --build
-4. Access the application:
+**4. Access the application:**
 
 Frontend: http://localhost:3000
 
 Backend API: http://localhost:5000/api/health
 
-🔑 Seed Credentials (Test Accounts)
+## **🔑 Seed Credentials (Test Accounts)**
 You can use the following accounts to test the different roles in the system:
 
 Admin: yigit@cankaya.edu.tr (Password: 1234)
@@ -50,5 +50,5 @@ Engineer: cem@cankaya.edu.tr (Password: 1234)
 
 Healthcare: selin@hacettepe.edu.tr (Password: 1234)
 
-🛡 Security & Audit
+## **🛡 Security & Audit**
 The system implements a comprehensive audit trail, logging every sensitive action (registration, moderation, meeting acceptance) into a tamper-resistant database table accessible only by administrators. All passwords are encrypted using bcrypt with 12 salt rounds. A custom background polling hook strictly monitors unread notification states securely without exposing unnecessary web socket connections.
