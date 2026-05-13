@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { toast } from 'sonner'
 import client from '../api/client'
 import { StatusBadge, DomainBadge } from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
@@ -12,7 +13,7 @@ const STATUSES = ['draft','active','meeting_scheduled','partner_found','expired'
 export default function PostDetail() {
   const { id } = useParams()
   const { user } = useAuth()
-  const navigate = useNavigate()
+const navigate = useNavigate()
   const [post, setPost]           = useState(null)
   const [loading, setLoading]     = useState(true)
   const [showMeeting, setShowMeeting] = useState(false)
@@ -30,7 +31,8 @@ export default function PostDetail() {
     try {
       const { data } = await client.patch(`/posts/${id}/status`, { status: s })
       setPost(data)
-    } catch (err) { alert(err.response?.data?.error ?? 'Failed') }
+      toast.success('Post status updated.')
+    } catch (err) { toast.error(err.response?.data?.error ?? 'Failed to update status.') }
     finally { setStatusLoading(false) }
   }
 
@@ -59,7 +61,10 @@ export default function PostDetail() {
         </div>
 
         <h1 className="text-xl font-bold text-slate-100 mb-4">{post.title}</h1>
-        <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{post.description}</p>
+        <div 
+          className="text-sm text-slate-300 leading-relaxed prose prose-invert max-w-none prose-p:mb-3 prose-a:text-sky-400 prose-ul:list-disc prose-ul:pl-5"
+          dangerouslySetInnerHTML={{ __html: post.description }} 
+        />
 
         <div className="mt-5 pt-4 border-t border-zinc-700 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
           <div>
@@ -92,11 +97,10 @@ export default function PostDetail() {
 
 // ── NDA Meeting Request Modal ────────────────────────────────────────────────
 function MeetingModal({ open, onClose, postId, postTitle }) {
-  const [message, setMessage]       = useState('')
+const [message, setMessage]       = useState('')
   const [slots, setSlots]           = useState(['', '', ''])
   const [ndaAccepted, setNdaAccepted] = useState(false)
   const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
   const [success, setSuccess]       = useState(false)
 
   const setSlot = i => e => setSlots(s => { const n=[...s]; n[i]=e.target.value; return n })
@@ -107,7 +111,6 @@ function MeetingModal({ open, onClose, postId, postTitle }) {
   const handleSubmit = async e => {
     e.preventDefault()
     if (!ndaAccepted) return
-    setError('')
     setLoading(true)
     try {
       await client.post('/meetings', {
@@ -118,14 +121,14 @@ function MeetingModal({ open, onClose, postId, postTitle }) {
       })
       setSuccess(true)
     } catch (err) {
-      setError(err.response?.data?.error ?? 'Failed to send request.')
+      toast.error(err.response?.data?.error ?? 'Failed to send request.')
     } finally {
       setLoading(false)
     }
   }
 
   const handleClose = () => {
-    setMessage(''); setSlots(['','','']); setNdaAccepted(false); setError(''); setSuccess(false)
+    setMessage(''); setSlots(['','','']); setNdaAccepted(false); setSuccess(false)
     onClose()
   }
 
@@ -186,8 +189,6 @@ function MeetingModal({ open, onClose, postId, postTitle }) {
               </span>
             </label>
           </div>
-
-          {error && <p className="text-sm text-rose-400 bg-rose-900/30 border border-rose-700/40 rounded-lg px-3 py-2">{error}</p>}
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={handleClose} className="btn-secondary flex-1">Cancel</button>

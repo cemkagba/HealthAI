@@ -54,9 +54,14 @@ async function runSeed() {
     const doctorId   = doctorRes.rows[0].id;
 
     // ── Insert posts (owned by Dr. Selin Samray) ──────────────────────────────
+    // expires_at = 30 days from now for seed posts
+    const post1ExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const post2ExpiresAt = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000);
+    const post3ExpiresAt = new Date(Date.now() + 25 * 24 * 60 * 60 * 1000);
+
     await client.query(
-      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
+      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8)`,
       [
         doctorId,
         'AI-Powered ECG Anomaly Detection',
@@ -65,12 +70,13 @@ async function runSeed() {
         'Prototype',
         'Ankara',
         `We are developing an AI model capable of detecting rare cardiac arrhythmias from 12-lead ECG data with higher sensitivity than current clinical tools. The clinical dataset (de-identified) is ready and pre-processed. We are seeking a Machine Learning engineer experienced in time-series classification and model interpretability (SHAP/LIME) to join the team. The goal is to publish findings and proceed to a multi-center validation study. Weekly virtual syncs via Teams are planned.`,
+        post1ExpiresAt,
       ]
     );
 
     await client.query(
-      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
+      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8)`,
       [
         doctorId,
         'NLP-Based Clinical Note Summarization',
@@ -79,12 +85,13 @@ async function runSeed() {
         'Ideation',
         'Istanbul',
         `Clinicians in our hospital spend an average of 2.3 hours per shift on documentation. This project aims to build a Turkish-language NLP pipeline that auto-summarizes free-text SOAP notes into structured discharge summaries. We have IRB approval and access to a corpus of 50,000+ anonymized notes. Looking for an NLP engineer with experience in transformer-based models (BERT/mBERT) and ideally Turkish language models such as BERTurk. No patient identifiers will be shared outside the hospital firewall.`,
+        post2ExpiresAt,
       ]
     );
 
     await client.query(
-      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
+      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8)`,
       [
         doctorId,
         'Federated Learning for MRI Segmentation',
@@ -93,6 +100,7 @@ async function runSeed() {
         'Research',
         'Izmir',
         `This project addresses the critical challenge of training robust brain tumor segmentation models without centralizing sensitive MRI data. We propose a federated learning framework across three partner hospitals in the Aegean region. Each site retains full data sovereignty. We need an engineer with expertise in federated learning frameworks (PySyft, Flower) and medical image segmentation (U-Net variants). The long-term goal is a CE-marked clinical decision support tool. Research grant funding is already secured for Phase 1.`,
+        post3ExpiresAt,
       ]
     );
 

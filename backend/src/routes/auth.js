@@ -132,4 +132,24 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/auth/me
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/me', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM users WHERE id = $1 RETURNING id',
+      [req.user.userId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    await logAction('USER_DELETED_ACCOUNT', req.user.userId, 'user', req.user.userId, {});
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('[DELETE /auth/me]', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

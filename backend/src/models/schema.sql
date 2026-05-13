@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS posts (
   city                VARCHAR(100) NOT NULL,
   description         TEXT         NOT NULL,
   status              post_status  NOT NULL DEFAULT 'draft',
+  expires_at          TIMESTAMPTZ,
   created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -80,3 +81,32 @@ CREATE INDEX IF NOT EXISTS idx_meeting_requests_post    ON meeting_requests(post
 CREATE INDEX IF NOT EXISTS idx_meeting_requests_req     ON meeting_requests(requester_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created       ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor         ON audit_logs(actor_id);
+
+-- ── NOTIFICATIONS ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notifications (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type        VARCHAR(50) NOT NULL,
+  message     TEXT        NOT NULL,
+  link_url    TEXT,
+  is_read     BOOLEAN     NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user       ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread     ON notifications(user_id) WHERE is_read = false;
+
+-- Add columns idempotently (for existing databases that were created before this schema revision)
+DO $$ BEGIN
+  ALTER TABLE posts ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link_url TEXT;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- expires_at index (must come AFTER the column exists)
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_posts_expires_at ON posts(expires_at) WHERE status = 'active';
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+

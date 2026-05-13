@@ -7,6 +7,32 @@ const router = express.Router();
 
 const VALID_STATUSES = ['draft', 'active', 'meeting_scheduled', 'partner_found', 'expired'];
 
+// Helper: expire overdue active posts
+async function expireOverduePosts(client) {
+  const result = await client.query(
+    `UPDATE posts
+     SET status = 'expired', updated_at = NOW()
+     WHERE status = 'active'
+       AND expires_at IS NOT NULL
+       AND expires_at < NOW()
+     RETURNING id, owner_id, title`
+  );
+  if (result.rows.length > 0) {
+    console.log(`⏰ Auto-expired ${result.rows.length} post(s).`);
+    // Create notifications for owners
+    for (const post of result.rows) {
+      await client.query(
+        `INSERT INTO notifications (user_id, type, message, link_url)
+         VALUES ($1, 'POST_EXPIRED', $2, '/my-posts')`,
+        [post.owner_id, `Your post "${post.title}" has expired and is no longer visible.`]
+      );
+    }
+  }
+  return result.rows.length;
+}
+
+module.exports.expireOverduePosts = expireOverduePosts;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/posts
 // Server-side filtering: ?domain=&expertise=&city=&page=1&limit=12
@@ -18,6 +44,14 @@ router.get('/', authenticate, async (req, res) => {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
     const offset = (page - 1) * limit;
+
+    // Auto-expire before returning results
+    const dbClient = await pool.connect();
+    try {
+      await expireOverduePosts(dbClient);
+    } finally {
+      dbClient.release();
+    }
 
     const conditions = ["p.status = 'active'"];
     const params = [];
@@ -117,7 +151,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, domain, required_expertise, stage, city, description, status } = req.body;
+    const { title, domain, required_expertise, stage, city, description, status, duration_days } = req.body;
 
     if (!title || !domain || !required_expertise || !stage || !city || !description) {
       return res.status(400).json({ error: 'title, domain, required_expertise, stage, city, and description are required' });
@@ -125,14 +159,18 @@ router.post('/', authenticate, async (req, res) => {
 
     const initialStatus = status === 'active' ? 'active' : 'draft';
 
+    // Validate and clamp duration
+    const days = Math.min(90, Math.max(20, parseInt(duration_days) || 20));
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
     const result = await pool.query(
-      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO posts (owner_id, title, domain, required_expertise, stage, city, description, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [req.user.userId, title.trim(), domain.trim(), required_expertise.trim(), stage.trim(), city.trim(), description.trim(), initialStatus]
+      [req.user.userId, title.trim(), domain.trim(), required_expertise.trim(), stage.trim(), city.trim(), description.trim(), initialStatus, expiresAt]
     );
 
-    await logAction('POST_CREATED', req.user.userId, 'post', result.rows[0].id, { status: initialStatus });
+    await logAction('POST_CREATED', req.user.userId, 'post', result.rows[0].id, { status: initialStatus, duration_days: days });
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('[POST /posts]', err);
@@ -205,4 +243,37 @@ router.patch('/:id/status', authenticate, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/posts/:id/expiry  — owner only, update expiry date
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/:id/expiry', authenticate, async (req, res) => {
+  try {
+    const { duration_days } = req.body;
+    if (!duration_days) {
+      return res.status(400).json({ error: 'duration_days is required' });
+    }
+
+    const existing = await pool.query('SELECT * FROM posts WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: 'Post not found' });
+    if (existing.rows[0].owner_id !== req.user.userId) return res.status(403).json({ error: 'Only the post owner can change expiry' });
+
+    // Validate: minimum 20 days from now
+    const days = Math.min(90, Math.max(20, parseInt(duration_days)));
+    const newExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(
+      `UPDATE posts SET expires_at = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [newExpiresAt, req.params.id]
+    );
+
+    await logAction('POST_EXPIRY_UPDATED', req.user.userId, 'post', req.params.id, { days });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[PATCH /posts/:id/expiry]', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports = router;
+module.exports.expireOverduePosts = expireOverduePosts;

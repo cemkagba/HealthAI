@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import client from '../api/client'
 import { StatusBadge, RoleBadge } from '../components/ui/Badge'
 import { Spinner } from '../components/ui/Spinner'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import { formatDistanceToNow, format } from 'date-fns'
+import { Download } from 'lucide-react'
 
 const TABS = ['overview','users','posts','logs']
 
@@ -58,22 +61,34 @@ function OverviewTab() {
     <div className="space-y-5">
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {statCards.map(c => (
-          <div key={c.label} className="card p-5">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">{c.label}</p>
-            <p className={`text-3xl font-bold ${c.color}`}>{c.value}</p>
-            <p className="text-xs text-slate-500 mt-1">{c.sub}</p>
+          <div key={c.label} className="card p-5 relative overflow-hidden group hover:border-white/10 transition-colors">
+            <div className="relative z-10">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">{c.label}</p>
+              <p className={`text-3xl font-bold ${c.color}`}>{c.value}</p>
+              <p className="text-xs text-slate-500 mt-1">{c.sub}</p>
+            </div>
+            {/* Visual background element */}
+            <div className={`absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-10 blur-xl group-hover:scale-150 transition-transform duration-500 ${c.color.replace('text-', 'bg-')}`} />
           </div>
         ))}
       </div>
       <div className="card p-5">
-        <p className="section-title mb-4">Posts by Status</p>
-        <div className="flex flex-wrap gap-3">
-          {Object.entries(stats.posts || {}).map(([status, count]) => (
-            <div key={status} className="flex items-center gap-2">
-              <StatusBadge status={status} />
-              <span className="text-sm font-semibold text-slate-100">{count}</span>
-            </div>
-          ))}
+        <p className="section-title mb-4">Posts by Status Distribution</p>
+        <div className="space-y-4">
+          {Object.entries(stats.posts || {}).map(([status, count]) => {
+            const percentage = totalPosts > 0 ? (count / totalPosts) * 100 : 0
+            return (
+              <div key={status}>
+                <div className="flex items-center justify-between mb-1">
+                  <StatusBadge status={status} />
+                  <span className="text-sm font-semibold text-slate-100">{count} <span className="text-xs text-slate-500 font-normal">({percentage.toFixed(1)}%)</span></span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-sky-500 rounded-full transition-all duration-1000" style={{ width: `${percentage}%` }} />
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -82,7 +97,7 @@ function OverviewTab() {
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 function UsersTab() {
-  const [users, setUsers]     = useState([])
+const [users, setUsers]     = useState([])
   const [pagination, setPagination] = useState({ totalPages: 1 })
   const [loading, setLoading] = useState(true)
   const [page, setPage]       = useState(1)
@@ -101,10 +116,19 @@ function UsersTab() {
 
   useEffect(() => { fetch(page, applied) }, [page, applied, fetch])
 
-  const toggleSuspend = async (userId, suspended) => {
+  const [confirmUser, setConfirmUser] = useState(null)
+
+  const toggleSuspend = async () => {
+    if (!confirmUser) return
+    const { userId, suspended } = confirmUser
     setToggling(userId)
-    try { await client.patch(`/admin/users/${userId}/suspend`, { suspended }); fetch(page, applied) }
-    catch (err) { alert(err.response?.data?.error ?? 'Failed') }
+    setConfirmUser(null)
+    try { 
+      await client.patch(`/admin/users/${userId}/suspend`, { suspended }); 
+      fetch(page, applied);
+      toast.success(`User ${suspended ? 'suspended' : 'unsuspended'}.`)
+    }
+    catch (err) { toast.error(err.response?.data?.error ?? 'Failed to update user.') }
     finally { setToggling(null) }
   }
 
@@ -138,7 +162,7 @@ function UsersTab() {
                   <td className="px-4 py-3 text-right">
                     {u.role !== 'admin' && (
                       <button
-                        onClick={() => toggleSuspend(u.id, !u.is_suspended)}
+                        onClick={() => setConfirmUser({ userId: u.id, suspended: !u.is_suspended, name: u.full_name })}
                         disabled={toggling === u.id}
                         id={`suspend-${u.id}`}
                         className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${u.is_suspended ? 'bg-emerald-800/50 text-emerald-300 hover:bg-emerald-700/50' : 'bg-rose-900/50 text-rose-300 hover:bg-rose-800/50'}`}
@@ -154,13 +178,23 @@ function UsersTab() {
         </div>
       )}
       <Pager page={page} totalPages={pagination.totalPages} setPage={setPage} />
+
+      <ConfirmModal 
+        open={!!confirmUser} 
+        onClose={() => setConfirmUser(null)} 
+        onConfirm={toggleSuspend} 
+        title={confirmUser?.suspended ? 'Suspend User' : 'Unsuspend User'} 
+        message={`Are you sure you want to ${confirmUser?.suspended ? 'suspend' : 'unsuspend'} the account of ${confirmUser?.name}?`} 
+        confirmText={confirmUser?.suspended ? 'Suspend' : 'Unsuspend'} 
+        confirmStyle={confirmUser?.suspended ? 'danger' : 'primary'}
+      />
     </div>
   )
 }
 
 // ── Posts (all statuses) ──────────────────────────────────────────────────────
 function PostsTab() {
-  const [posts, setPosts]     = useState([])
+const [posts, setPosts]     = useState([])
   const [pagination, setPagination] = useState({ totalPages: 1 })
   const [loading, setLoading] = useState(true)
   const [page, setPage]       = useState(1)
@@ -175,11 +209,19 @@ function PostsTab() {
 
   useEffect(() => { fetch(page) }, [page, fetch])
 
-  const deletePost = async id => {
-    if (!confirm('Permanently remove this post? This cannot be undone.')) return
+  const [confirmPost, setConfirmPost] = useState(null)
+
+  const deletePost = async () => {
+    if (!confirmPost) return
+    const id = confirmPost.id
     setDeleting(id)
-    try { await client.delete(`/admin/posts/${id}`); fetch(page) }
-    catch (err) { alert(err.response?.data?.error ?? 'Failed') }
+    setConfirmPost(null)
+    try { 
+      await client.delete(`/admin/posts/${id}`); 
+      fetch(page);
+      toast.info('Post removed permanently.')
+    }
+    catch (err) { toast.error(err.response?.data?.error ?? 'Failed to remove post.') }
     finally { setDeleting(null) }
   }
 
@@ -205,7 +247,7 @@ function PostsTab() {
                 <td className="px-4 py-3 text-xs text-slate-400 hidden sm:table-cell">{p.owner_name}<br/><span className="text-slate-600">{p.owner_email}</span></td>
                 <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => deletePost(p.id)} disabled={deleting===p.id} id={`delete-post-${p.id}`}
+                  <button onClick={() => setConfirmPost({ id: p.id, title: p.title })} disabled={deleting===p.id} id={`delete-post-${p.id}`}
                     className="text-xs px-3 py-1.5 rounded-lg font-medium bg-rose-900/50 text-rose-300 hover:bg-rose-800/50 transition-all disabled:opacity-40">
                     {deleting===p.id ? <Spinner size="sm" /> : 'Remove'}
                   </button>
@@ -216,6 +258,16 @@ function PostsTab() {
         </table>
       </div>
       <Pager page={page} totalPages={pagination.totalPages} setPage={setPage} />
+
+      <ConfirmModal 
+        open={!!confirmPost} 
+        onClose={() => setConfirmPost(null)} 
+        onConfirm={deletePost} 
+        title="Delete Post" 
+        message={`Are you sure you want to permanently delete the post "${confirmPost?.title}"? This action cannot be undone.`} 
+        confirmText="Delete Post" 
+        confirmStyle="danger"
+      />
     </div>
   )
 }
@@ -244,10 +296,35 @@ function LogsTab() {
     MEETING_REQUEST_REJECTED: 'text-rose-400', SYSTEM_SEED: 'text-zinc-400',
   }
 
+  const exportCsv = () => {
+    if (!logs.length) return
+    const headers = ['Action', 'Actor', 'Target Type', 'Target ID', 'Time']
+    const rows = logs.map(l => [
+      l.action, 
+      l.actor_name || 'system', 
+      l.target_type || '', 
+      l.target_id || '', 
+      new Date(l.created_at).toISOString()
+    ])
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join("\n")
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", `audit_logs_page_${page}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   if (loading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={exportCsv} disabled={!logs.length} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-2">
+          <Download size={14} /> Export CSV (Page {page})
+        </button>
+      </div>
       <div className="card overflow-hidden">
         <table className="w-full text-xs">
           <thead><tr className="border-b border-zinc-700 bg-zinc-900/50">

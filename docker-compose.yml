@@ -1,22 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: healthai_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-healthai}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-healthai_secure_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-healthai_db}
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-healthai} -d ${POSTGRES_DB:-healthai_db}"]
-      interval: 5s
-      timeout: 5s
-      retries: 15
-    networks:
-      - healthai_network
-
   backend:
     build:
       context: ./backend
@@ -24,15 +6,12 @@ services:
     container_name: healthai_backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-healthai}:${POSTGRES_PASSWORD:-healthai_secure_pass}@db:5432/${POSTGRES_DB:-healthai_db}
+      DATABASE_URL: postgresql://neondb_owner:npg_rRAQuW1aGXP8@ep-silent-unit-alzcd4nm.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require
       JWT_SECRET: ${JWT_SECRET:-change_this_secret_in_production_please_32chars}
       PORT: 5000
       NODE_ENV: production
     ports:
       - "5000:5000"
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - healthai_network
 
@@ -53,6 +32,4 @@ networks:
   healthai_network:
     driver: bridge
 
-volumes:
-  pg_data:
-    driver: local
+

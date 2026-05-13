@@ -9,17 +9,39 @@
   ::-webkit-scrollbar { @apply w-1.5; }
   ::-webkit-scrollbar-track { @apply bg-slate-900; }
   ::-webkit-scrollbar-thumb { @apply bg-slate-600 rounded-full; }
+
+  /* Global Keyboard Accessibility */
+  a, button, input, select, textarea {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900;
+  }
+
+  /* Tiptap Editor Styles */
+  .ProseMirror {
+    @apply outline-none min-h-[150px] max-h-[400px] overflow-y-auto px-4 py-3 bg-slate-950/50 text-slate-200 text-sm;
+  }
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply text-slate-500 float-left h-0 pointer-events-none;
+  }
+  .ProseMirror ul { @apply list-disc list-inside space-y-1 mb-2; }
+  .ProseMirror ol { @apply list-decimal list-inside space-y-1 mb-2; }
+  .ProseMirror strong { @apply font-bold text-white; }
+  .ProseMirror em { @apply italic; }
 }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-sky-600 hover:bg-sky-500 text-white focus:ring-sky-500; }
-  .btn-secondary { @apply btn bg-zinc-700 hover:bg-zinc-600 text-slate-100 focus:ring-zinc-500; }
-  .btn-danger { @apply btn bg-rose-700 hover:bg-rose-600 text-white focus:ring-rose-500; }
-  .btn-ghost { @apply btn text-slate-400 hover:text-slate-100 hover:bg-zinc-800 focus:ring-slate-500; }
-  .input { @apply w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-colors text-sm; }
+  .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-95; }
+  .btn-primary { @apply btn bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-sky-500/20 shadow-lg border border-sky-400/20 focus:ring-sky-500; }
+  .btn-secondary { @apply btn bg-white/5 hover:bg-white/10 text-slate-100 border border-white/10 backdrop-blur-sm focus:ring-slate-500; }
+  .btn-danger { @apply btn bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white shadow-rose-500/20 shadow-lg border border-rose-400/20 focus:ring-rose-500; }
+  .btn-ghost { @apply btn text-slate-400 hover:text-slate-100 hover:bg-white/5 focus:ring-slate-500 shadow-none; }
+  
+  .input { @apply w-full px-4 py-2.5 bg-slate-950/50 border border-slate-700/50 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all text-sm backdrop-blur-sm shadow-inner; }
   .label { @apply block text-sm font-medium text-slate-300 mb-1.5; }
-  .card { @apply bg-zinc-800/80 border border-zinc-700 rounded-xl; }
-  .page-title { @apply text-2xl font-bold text-slate-100; }
+  
+  .card { @apply bg-slate-900/40 border border-white/5 rounded-2xl backdrop-blur-xl shadow-xl; }
+  .glass { @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-xl; }
+  
+  .page-title { @apply text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 tracking-tight; }
   .section-title { @apply text-lg font-semibold text-slate-200; }
 }

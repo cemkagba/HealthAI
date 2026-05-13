@@ -1,9 +1,26 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import client from '../api/client'
 import { StatusBadge, RoleBadge } from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
-import { Spinner } from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
+import EmptyState from '../components/ui/EmptyState'
 import { format, formatDistanceToNow } from 'date-fns'
+import { CalendarHeart, CheckCircle, XCircle } from 'lucide-react'
+
+function MeetingStatusBadge({ status }) {
+  const colors = {
+    pending: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    accepted: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    rejected: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    cancelled: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  }
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${colors[status] || colors.pending}`}>
+      {status}
+    </span>
+  )
+}
 
 export default function MeetingRequests() {
   const [tab, setTab] = useState('received')
@@ -27,7 +44,7 @@ export default function MeetingRequests() {
 }
 
 function ReceivedTab() {
-  const [requests, setRequests] = useState([])
+const [requests, setRequests] = useState([])
   const [loading, setLoading]   = useState(true)
   const [accepting, setAccepting] = useState(null)
 
@@ -42,23 +59,27 @@ function ReceivedTab() {
 
   const reject = async id => {
     if (!confirm('Reject this meeting request?')) return
-    try { await client.patch(`/meetings/${id}/reject`); fetch() }
-    catch (err) { alert(err.response?.data?.error ?? 'Failed') }
+    try { 
+      await client.patch(`/meetings/${id}/reject`); 
+      fetch();
+      toast.info('Request rejected.')
+    }
+    catch (err) { toast.error(err.response?.data?.error ?? 'Failed to reject request.') }
   }
 
-  if (loading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
-  if (requests.length === 0) return <Empty label="No meeting requests received yet." />
+  if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}</div>
+  if (requests.length === 0) return <EmptyState icon={CalendarHeart} title="No Received Requests" description="You haven't received any meeting requests yet." />
 
   return (
     <div className="space-y-4">
       {requests.map(r => (
-        <div key={r.id} className="card p-5 space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div key={r.id} className="card p-6 md:p-8 space-y-6 hover:border-sky-500/50 hover:bg-slate-800/80 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/5 pb-4">
             <div>
-              <p className="text-xs text-slate-500 mb-1">Request for</p>
-              <p className="font-semibold text-slate-100">{r.post_title}</p>
+              <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Request for</p>
+              <p className="font-semibold text-slate-100 text-lg">{r.post_title}</p>
             </div>
-            <StatusBadge status={r.status} />
+            <MeetingStatusBadge status={r.status} />
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -79,29 +100,22 @@ function ReceivedTab() {
             </div>
           )}
 
-          <div>
-            <p className="text-xs text-slate-500 mb-2">Proposed time slots</p>
-            <div className="flex flex-wrap gap-2">
-              {(r.proposed_slots || []).map((slot, i) => (
-                <span key={i} className="text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-300 font-mono">
-                  {format(new Date(slot), 'dd MMM yyyy, HH:mm')}
-                </span>
-              ))}
-            </div>
-          </div>
-
           <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span className={`w-1.5 h-1.5 rounded-full ${r.nda_accepted ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+            <span className={`w-2 h-2 rounded-full ${r.nda_accepted ? 'bg-emerald-400' : 'bg-rose-400'}`} />
             NDA {r.nda_accepted ? 'accepted by requester' : 'NOT accepted'}
-            <span className="ml-auto">{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
+            <span className="ml-auto flex items-center gap-1.5"><CalendarHeart size={14} className="text-slate-500"/> {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
           </div>
 
           {r.status === 'pending' && (
             <AcceptSlotWidget requestId={r.id} slots={r.proposed_slots} onDone={fetch} onReject={() => reject(r.id)} />
           )}
           {r.status === 'accepted' && r.accepted_slot && (
-            <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-lg px-3 py-2 text-sm text-emerald-300">
-              ✅ Accepted slot: <strong>{format(new Date(r.accepted_slot), 'dd MMM yyyy, HH:mm')}</strong>
+            <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4 text-emerald-300 flex items-center gap-3">
+              <CheckCircle size={24} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold mb-0.5">Meeting Confirmed</p>
+                <p className="text-xs text-emerald-300/80">Scheduled for {format(new Date(r.accepted_slot), 'dd MMM yyyy, HH:mm')}</p>
+              </div>
             </div>
           )}
         </div>
@@ -113,23 +127,52 @@ function ReceivedTab() {
 function AcceptSlotWidget({ requestId, slots, onDone, onReject }) {
   const [selected, setSelected] = useState('')
   const [loading, setLoading]   = useState(false)
+
   const accept = async () => {
     if (!selected) return
     setLoading(true)
-    try { await client.patch(`/meetings/${requestId}/accept`, { accepted_slot: selected }); onDone() }
-    catch (err) { alert(err.response?.data?.error ?? 'Failed') }
+    try { 
+      await client.patch(`/meetings/${requestId}/accept`, { accepted_slot: selected }); 
+      onDone();
+      toast.success('Meeting request accepted!');
+    }
+    catch (err) { toast.error(err.response?.data?.error ?? 'Failed to accept slot.') }
     finally { setLoading(false) }
   }
+
   return (
-    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-700">
-      <select className="input flex-1 min-w-[180px] text-xs" value={selected} onChange={e => setSelected(e.target.value)} id={`accept-slot-${requestId}`}>
-        <option value="">Select a slot to accept…</option>
-        {(slots || []).map((s, i) => <option key={i} value={s}>{format(new Date(s), 'dd MMM yyyy, HH:mm')}</option>)}
-      </select>
-      <button onClick={accept} disabled={!selected || loading} className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40">
-        {loading ? <Spinner size="sm" /> : '✓ Accept'}
-      </button>
-      <button onClick={onReject} className="btn-danger text-xs px-3 py-1.5">✕ Reject</button>
+    <div className="pt-4 border-t border-white/5 space-y-4">
+      <div>
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Proposed Time Slots</p>
+        <div className="flex flex-wrap gap-2">
+          {(slots || []).map((s, i) => (
+            <button
+              key={i}
+              onClick={() => setSelected(s)}
+              className={`text-xs px-4 py-2 rounded-full font-mono transition-all border ${selected === s ? 'bg-sky-500/20 border-sky-500/50 text-sky-400 ring-2 ring-sky-500/30' : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-500'}`}
+            >
+              {format(new Date(s), 'dd MMM yyyy, HH:mm')}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="flex flex-wrap items-center gap-3">
+        <button 
+          onClick={accept} 
+          disabled={!selected || loading} 
+          className="btn-primary text-sm px-5 py-2.5 disabled:opacity-40 flex items-center gap-2"
+        >
+          {loading ? <Spinner size="sm" /> : <CheckCircle size={16} />} 
+          {selected ? 'Accept Selected Slot' : 'Select a Slot to Accept'}
+        </button>
+        <button 
+          onClick={onReject} 
+          className="btn-ghost text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-sm px-5 py-2.5 flex items-center gap-2"
+        >
+          <XCircle size={16} /> Reject Request
+        </button>
+      </div>
     </div>
   )
 }
@@ -145,49 +188,45 @@ function SentTab() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
-  if (requests.length === 0) return <Empty label="You haven't sent any meeting requests yet." />
+  if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}</div>
+  if (requests.length === 0) return <EmptyState icon={CalendarHeart} title="No Sent Requests" description="You haven't sent any meeting requests yet." />
 
   return (
     <div className="space-y-4">
       {requests.map(r => (
-        <div key={r.id} className="card p-5 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div key={r.id} className="card p-6 md:p-8 space-y-6 hover:border-sky-500/50 hover:bg-slate-800/80 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/5 pb-4">
             <div>
-              <p className="text-xs text-slate-500 mb-1">Post</p>
-              <p className="font-semibold text-slate-100">{r.post_title}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{r.post_owner_name} · {r.post_owner_institution}</p>
+              <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Post</p>
+              <p className="font-semibold text-slate-100 text-lg">{r.post_title}</p>
+              <p className="text-sm text-slate-500 mt-1">{r.post_owner_name} · {r.post_owner_institution}</p>
             </div>
-            <StatusBadge status={r.status} />
+            <MeetingStatusBadge status={r.status} />
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-1.5">Your proposed slots</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Your Proposed Slots</p>
             <div className="flex flex-wrap gap-2">
               {(r.proposed_slots || []).map((slot, i) => (
-                <span key={i} className={`text-xs rounded-lg px-3 py-1.5 font-mono border ${r.accepted_slot === slot ? 'bg-emerald-900/30 border-emerald-700/50 text-emerald-300' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
+                <span key={i} className={`text-xs px-4 py-2 rounded-full font-mono border flex items-center gap-2 ${r.accepted_slot === slot ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 ring-2 ring-emerald-500/30' : 'bg-slate-800/80 border-slate-700 text-slate-300'}`}>
                   {format(new Date(slot), 'dd MMM yyyy, HH:mm')}
-                  {r.accepted_slot === slot && ' ✓'}
+                  {r.accepted_slot === slot && <CheckCircle size={14} />}
                 </span>
               ))}
             </div>
           </div>
           {r.status === 'accepted' && r.accepted_slot && (
-            <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-lg px-3 py-2 text-sm text-emerald-300">
-              🎉 Meeting confirmed: <strong>{format(new Date(r.accepted_slot), 'dd MMM yyyy, HH:mm')}</strong> — Join via your agreed video platform (Zoom/Teams).
+            <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4 text-emerald-300 flex items-center gap-3">
+              <CheckCircle size={24} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold mb-0.5">Meeting Confirmed</p>
+                <p className="text-xs text-emerald-300/80">Scheduled for {format(new Date(r.accepted_slot), 'dd MMM yyyy, HH:mm')} — Join via your agreed video platform.</p>
+              </div>
             </div>
           )}
-          <p className="text-xs text-slate-600">{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</p>
+          <p className="text-xs text-slate-600 flex items-center gap-1.5"><CalendarHeart size={14} className="text-slate-500"/> {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</p>
         </div>
       ))}
     </div>
   )
 }
 
-function Empty({ label }) {
-  return (
-    <div className="text-center py-16 text-slate-500">
-      <p className="text-4xl mb-3">📭</p>
-      <p className="font-medium">{label}</p>
-    </div>
-  )
-}

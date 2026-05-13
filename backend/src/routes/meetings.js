@@ -40,6 +40,12 @@ router.post('/', authenticate, async (req, res) => {
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
       [post_id, req.user.userId, true, JSON.stringify(proposed_slots), message?.trim() || null]
     );
+
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, message) VALUES ($1, $2, $3)`,
+      [post.owner_id, 'meeting_request', `You received a new meeting request for your post: "${post.title}"`]
+    );
+
     await logAction('MEETING_REQUEST_SENT', req.user.userId, 'meeting_request', result.rows[0].id, { post_id });
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -117,6 +123,12 @@ router.patch('/:id/accept', authenticate, async (req, res) => {
       [mr.post_id, req.params.id]
     );
     await client.query(`UPDATE posts SET status='meeting_scheduled', updated_at=NOW() WHERE id=$1`, [mr.post_id]);
+
+    await client.query(
+      `INSERT INTO notifications (user_id, type, message) VALUES ($1, $2, $3)`,
+      [mr.requester_id, 'meeting_accepted', `Your meeting request for "${postResult.rows[0].title}" was accepted. Scheduled for ${new Date(accepted_slot).toLocaleString()}.`]
+    );
+
     await client.query('COMMIT');
 
     await logAction('MEETING_REQUEST_ACCEPTED', req.user.userId, 'meeting_request', req.params.id, { post_id: mr.post_id, accepted_slot });
@@ -145,6 +157,12 @@ router.patch('/:id/reject', authenticate, async (req, res) => {
     const result = await pool.query(
       `UPDATE meeting_requests SET status='rejected' WHERE id=$1 RETURNING *`, [req.params.id]
     );
+
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, message) VALUES ($1, $2, $3)`,
+      [mr.requester_id, 'meeting_rejected', `Your meeting request for a post was declined.`]
+    );
+
     await logAction('MEETING_REQUEST_REJECTED', req.user.userId, 'meeting_request', req.params.id, { post_id: mr.post_id });
     res.json(result.rows[0]);
   } catch (err) {
