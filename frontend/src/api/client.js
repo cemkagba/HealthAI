@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const client = axios.create({ baseURL: '/api' })
+const client = axios.create({
+  baseURL: 'https://healthai-backend-o1nt.onrender.com/api'
+})
 
 client.interceptors.request.use(config => {
   const token = localStorage.getItem('healthai_token')
